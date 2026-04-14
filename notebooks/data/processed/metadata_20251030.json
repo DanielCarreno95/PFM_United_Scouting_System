@@ -1,0 +1,11 @@
+{
+  "created_at": "2025-10-30T14:36:00",
+  "rows": 1589,
+  "cols": 31,
+  "filters": {
+    "minutes_min": 900
+  },
+  "scaling": "MinMax global (0–100, winsorized 1–99%)",
+  "source": "ETL_scaling_pipeline.ipynb",
+  "version": "20251030"
+}

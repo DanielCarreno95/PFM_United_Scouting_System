@@ -1,0 +1,34 @@
+Actua como redactor academico experto en analitica deportiva y proyectos fin de master.
+
+Quiero que conviertas el contenido de mi archivo `DOCUMENTO_MARCO_BORRADOR.md` en un documento final de maximo 14 paginas, con tono profesional, claro y orientado a directivos deportivos y tribunal tecnico.
+
+Condiciones obligatorias:
+1) Mantener la estructura exigida en MPAD:
+   - Portada
+   - Indice
+   - Recursos (links)
+   - Resumen ejecutivo
+   - Introduccion
+   - Objetivos
+   - Escenario temporal
+   - Arquitectura conceptual y tecnologica
+   - Metodologia CRISP-DM
+   - Desarrollo del trabajo
+   - Discusion de resultados
+   - Conclusiones y trabajo futuro
+   - Bibliografia
+   - Anexos
+2) Redaccion en espanol profesional (Espana), sin tecnicismos innecesarios.
+3) Incluir transiciones claras entre secciones.
+4) No inventar funcionalidades que no existan.
+5) Destacar explicitamente:
+   - que la app usa PDF con fpdf2,
+   - que existe una metrica ML (similitud coseno ponderada en Similares),
+   - que el alcance operativo es Premier League 2025/26.
+6) Entregar en formato listo para pegar en Word:
+   - titulos H1/H2/H3,
+   - parrafos cerrados,
+   - bullets solo cuando aporten claridad.
+7) Longitud objetivo: 10-12 paginas equivalentes.
+
+Antes de redactar, haz una mini lista de "supuestos detectados" (maximo 8) para que yo los valide.
