@@ -9,27 +9,13 @@ from utils.data_loader import load_main_dataset
 from utils.metrics import label, round_numeric_for_display
 from utils.filters import render_global_filters
 from utils.pdf_export import build_report_pdf
-from st_aggrid import AgGrid, GridOptionsBuilder, ColumnsAutoSizeMode, GridUpdateMode, JsCode
 
 st.set_page_config(page_title="United Elite Scouting Hub — Ranking", layout="wide")
 
 
-def _render_rank_table(df_table: pd.DataFrame, grid_options: dict, key: str) -> None:
-    """Render robusto: usa AgGrid y, si falla en cloud, muestra dataframe estándar."""
-    try:
-        AgGrid(
-            df_table,
-            gridOptions=grid_options,
-            theme="streamlit",
-            columns_auto_size_mode=ColumnsAutoSizeMode.FIT_ALL_COLUMNS_TO_VIEW,
-            update_mode=GridUpdateMode.NO_UPDATE,
-            height=480,
-            allow_unsafe_jscode=True,
-            key=key,
-        )
-    except Exception:
-        st.info("Visualización alternativa activada para garantizar lectura de tabla en este entorno.")
-        st.dataframe(df_table, use_container_width=True, hide_index=True)
+def _render_rank_table(df_table: pd.DataFrame, key: str) -> None:
+    """Tabla robusta en cloud/local sin dependencia de componentes JS."""
+    st.dataframe(df_table, use_container_width=True, hide_index=True, key=key)
 
 
 # ==============================
@@ -154,18 +140,6 @@ if season_count == 1 and max_mins <= 600:
 st.markdown("---")
 
 # ==============================
-# Colorear columnas condicionales
-# ==============================
-heat_js = JsCode("""
-    function(params) {
-        var v = Number(params.value);
-        if (isNaN(v)) return {};
-        var hue = 120 * (v / 100.0);
-        return {'backgroundColor': 'hsl(' + hue + ',70%,35%)', 'color':'white'};
-    }
-""")
-
-# ==============================
 # RANKING UNA MÉTRICA
 # ==============================
 if rank_mode == "Ranking por indicador":
@@ -212,14 +186,7 @@ if rank_mode == "Ranking por indicador":
         f"{label(metric_to_rank)}", ranking_label, "Percentil (vs. filtro)"
     ]
 
-    # --- grid con formato condicional ---
-    gb = GridOptionsBuilder.from_dataframe(df_disp)
-    gb.configure_default_column(sortable=True, resizable=True, filter=True)
-    gb.configure_column("Percentil (vs. filtro)", cellStyle=heat_js)
-    gb.configure_column("Jugador", pinned="left", minWidth=180)
-    grid = gb.build()
-
-    _render_rank_table(df_disp, grid, "single_aggrid")
+    _render_rank_table(df_disp, "single_table")
 
 
 # ==============================
@@ -264,13 +231,7 @@ else:
     df_disp = round_numeric_for_display(df_rank[cols_show], 3)
     df_disp.columns = ["Jugador", "Equipo", "Temporada", "Rol Táctico", "Competición", "Minutos", "Edad"] + [f"{label(m)}" for m in feats] + ["Índice compuesto (0–100)"]
 
-    gb = GridOptionsBuilder.from_dataframe(df_disp)
-    gb.configure_default_column(sortable=True, resizable=True, filter=True)
-    gb.configure_column("Índice compuesto (0–100)", cellStyle=heat_js)
-    gb.configure_column("Jugador", pinned="left", minWidth=180)
-    grid = gb.build()
-
-    _render_rank_table(df_disp, grid, "multi_aggrid")
+    _render_rank_table(df_disp, "multi_table")
 
 # ==============================
 # BOTONES
@@ -300,28 +261,35 @@ with colb3:
         keep = [c for c in ["Jugador", "Equipo", "Minutos", "Edad", "Índice compuesto (0–100)"] if c in rank_pdf_df.columns]
         rank_pdf_df = rank_pdf_df[keep]
 
-    rank_pdf = build_report_pdf(
-        title="Informe de ranking de mercado",
-        subtitle="Priorizacion de jugadores del grupo filtrado",
-        bullet_points=[
-            f"Registros evaluados: {len(df_view):,}",
-            f"Minutos minimos aplicados: {min_floor}",
-            f"Modo: {rank_mode}",
-            (
-                f"Indicador principal: {label(metric_to_rank)}"
-                if rank_mode == "Ranking por indicador"
-                else f"Indicadores ponderados: {', '.join([label(m) for m in feats])}"
-            ),
-        ],
-        table_df=rank_pdf_df,
-        table_title="Tabla de ranking",
-        max_rows=25,
-        max_cols=7,
-    )
-    st.download_button(
-        "📄 Exportar PDF",
-        data=rank_pdf,
-        file_name="ranking_jugadores.pdf",
-        mime="application/pdf",
-        use_container_width=True,
-    )
+    if st.button("Preparar informe PDF", use_container_width=True, key="rank_prepare_pdf"):
+        with st.spinner("Generando informe de ranking..."):
+            st.session_state["rank_pdf_bytes"] = build_report_pdf(
+                title="Informe de ranking de mercado",
+                subtitle="Priorizacion de jugadores del grupo filtrado",
+                bullet_points=[
+                    f"Registros evaluados: {len(df_view):,}",
+                    f"Minutos minimos aplicados: {min_floor}",
+                    f"Modo: {rank_mode}",
+                    (
+                        f"Indicador principal: {label(metric_to_rank)}"
+                        if rank_mode == "Ranking por indicador"
+                        else f"Indicadores ponderados: {', '.join([label(m) for m in feats])}"
+                    ),
+                ],
+                table_df=rank_pdf_df,
+                table_title="Tabla de ranking",
+                max_rows=25,
+                max_cols=7,
+            )
+            st.success("Informe preparado. Ya puedes descargarlo.")
+
+    rank_pdf_bytes = st.session_state.get("rank_pdf_bytes")
+    if rank_pdf_bytes:
+        st.download_button(
+            "📄 Descargar informe PDF",
+            data=rank_pdf_bytes,
+            file_name="ranking_jugadores.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+            key="rank_download_pdf",
+        )

@@ -9,27 +9,14 @@ from utils.data_loader import load_main_dataset
 from utils.metrics import label, round_numeric_for_display
 from utils.filters import sidebar_filters
 from utils.pdf_export import build_report_pdf
-from st_aggrid import AgGrid, GridOptionsBuilder, ColumnsAutoSizeMode, GridUpdateMode, JsCode
 
 # ======= CONFIGURACIÓN BASE =======
 st.set_page_config(page_title="United Elite Scouting Hub — Similares", layout="wide")
 
 
-def _render_similares_table(df_table: pd.DataFrame, grid_options: dict) -> None:
-    """Render robusto en web: AgGrid con fallback a dataframe nativo."""
-    try:
-        AgGrid(
-            df_table,
-            gridOptions=grid_options,
-            theme="streamlit",
-            update_mode=GridUpdateMode.NO_UPDATE,
-            columns_auto_size_mode=ColumnsAutoSizeMode.FIT_CONTENTS,
-            height=500,
-            allow_unsafe_jscode=True,
-        )
-    except Exception:
-        st.info("Visualización alternativa activada para garantizar lectura de tabla en este entorno.")
-        st.dataframe(df_table, use_container_width=True, hide_index=True)
+def _render_similares_table(df_table: pd.DataFrame) -> None:
+    """Tabla robusta en cloud/local sin dependencia de componentes JS."""
+    st.dataframe(df_table, use_container_width=True, hide_index=True)
 
 # ======= ESTILO ANCHO COMPLETO =======
 st.markdown("""
@@ -194,25 +181,7 @@ with col_left:
     out.rename(columns={"player": "Jugador"}, inplace=True)
     disp = round_numeric_for_display(out, ndigits=2)
 
-    gb = GridOptionsBuilder.from_dataframe(disp)
-    gb.configure_default_column(sortable=True, filter=True, resizable=True, floatingFilter=True)
-    gb.configure_column("Jugador", pinned="left", minWidth=230, tooltipField="Jugador")
-
-    heat_js = JsCode("""
-        function(params){
-            var v = Number(params.value);
-            if(isNaN(v)) return {};
-            v = Math.max(0, Math.min(100.0, v));
-            var hue = 120 * (v / 100.0);
-            return {'backgroundColor':'hsl(' + hue + ',65%,25%)','color':'white'};
-        }
-    """)
-
-    for col in feats_preview + ["similitud"]:
-        if col in disp.columns:
-            gb.configure_column(col, cellStyle=heat_js, minWidth=110)
-
-    _render_similares_table(disp, gb.build())
+    _render_similares_table(disp)
 
     st.download_button(
         "⬇️ Descargar comparables (CSV)",
@@ -220,27 +189,34 @@ with col_left:
         file_name=f"similares_{ref_player}.csv",
         mime="text/csv"
     )
-    sim_pdf = build_report_pdf(
-        title="Informe de perfiles similares",
-        subtitle=f"Jugador referencia: {ref_player}",
-        bullet_points=[
-            f"Jugadores comparables listados: {len(out):,}",
-            f"Indicadores evaluados: {len(feats)} (vista PDF: {len(feats_preview)})",
-            "Metodo: similitud coseno ponderada",
-            f"Fortalezas: {', '.join(strengths_txt) if strengths_txt else 'N/D'}",
-            f"Aspectos a reforzar: {', '.join(needs_txt) if needs_txt else 'N/D'}",
-        ],
-        table_df=disp.head(10),
-        table_title="Top perfiles similares",
-        max_rows=10,
-        max_cols=10,
-    )
-    st.download_button(
-        "📄 Descargar comparables (PDF)",
-        data=sim_pdf,
-        file_name=f"similares_{ref_player}.pdf",
-        mime="application/pdf",
-    )
+    if st.button("Preparar comparables (PDF)", use_container_width=True, key="sim_prepare_pdf"):
+        with st.spinner("Generando informe de jugadores similares..."):
+            st.session_state["sim_pdf_bytes"] = build_report_pdf(
+                title="Informe de perfiles similares",
+                subtitle=f"Jugador referencia: {ref_player}",
+                bullet_points=[
+                    f"Jugadores comparables listados: {len(out):,}",
+                    f"Indicadores evaluados: {len(feats)} (vista PDF: {len(feats_preview)})",
+                    "Metodo: similitud coseno ponderada",
+                    f"Fortalezas: {', '.join(strengths_txt) if strengths_txt else 'N/D'}",
+                    f"Aspectos a reforzar: {', '.join(needs_txt) if needs_txt else 'N/D'}",
+                ],
+                table_df=disp.head(10),
+                table_title="Top perfiles similares",
+                max_rows=10,
+                max_cols=10,
+            )
+            st.success("Informe preparado. Ya puedes descargarlo.")
+
+    sim_pdf_bytes = st.session_state.get("sim_pdf_bytes")
+    if sim_pdf_bytes:
+        st.download_button(
+            "📄 Descargar comparables (PDF)",
+            data=sim_pdf_bytes,
+            file_name=f"similares_{ref_player}.pdf",
+            mime="application/pdf",
+            key="sim_download_pdf",
+        )
 
 # ------- PERFIL DEL JUGADOR (DERECHA) --------
 with col_right:
