@@ -14,6 +14,24 @@ from st_aggrid import AgGrid, GridOptionsBuilder, ColumnsAutoSizeMode, GridUpdat
 st.set_page_config(page_title="United Elite Scouting Hub — Ranking", layout="wide")
 
 
+def _render_rank_table(df_table: pd.DataFrame, grid_options: dict, key: str) -> None:
+    """Render robusto: usa AgGrid y, si falla en cloud, muestra dataframe estándar."""
+    try:
+        AgGrid(
+            df_table,
+            gridOptions=grid_options,
+            theme="streamlit",
+            columns_auto_size_mode=ColumnsAutoSizeMode.FIT_ALL_COLUMNS_TO_VIEW,
+            update_mode=GridUpdateMode.NO_UPDATE,
+            height=480,
+            allow_unsafe_jscode=True,
+            key=key,
+        )
+    except Exception:
+        st.info("Visualización alternativa activada para garantizar lectura de tabla en este entorno.")
+        st.dataframe(df_table, use_container_width=True, hide_index=True)
+
+
 # ==============================
 # Cargar dataset
 # ==============================
@@ -201,16 +219,7 @@ if rank_mode == "Ranking por indicador":
     gb.configure_column("Jugador", pinned="left", minWidth=180)
     grid = gb.build()
 
-    AgGrid(
-        df_disp,
-        gridOptions=grid,
-        theme="streamlit",
-        columns_auto_size_mode=ColumnsAutoSizeMode.FIT_ALL_COLUMNS_TO_VIEW,
-        update_mode=GridUpdateMode.NO_UPDATE,
-        height=480,
-        allow_unsafe_jscode=True,
-        key="single_aggrid"
-    )
+    _render_rank_table(df_disp, grid, "single_aggrid")
 
 
 # ==============================
@@ -261,16 +270,7 @@ else:
     gb.configure_column("Jugador", pinned="left", minWidth=180)
     grid = gb.build()
 
-    AgGrid(
-        df_disp,
-        gridOptions=grid,
-        theme="streamlit",
-        columns_auto_size_mode=ColumnsAutoSizeMode.FIT_ALL_COLUMNS_TO_VIEW,
-        update_mode=GridUpdateMode.NO_UPDATE,
-        height=480,
-        allow_unsafe_jscode=True,
-        key="multi_aggrid"
-    )
+    _render_rank_table(df_disp, grid, "multi_aggrid")
 
 # ==============================
 # BOTONES

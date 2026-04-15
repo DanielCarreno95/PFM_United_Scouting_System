@@ -14,6 +14,23 @@ from st_aggrid import AgGrid, GridOptionsBuilder, ColumnsAutoSizeMode, GridUpdat
 # ======= CONFIGURACIÓN BASE =======
 st.set_page_config(page_title="United Elite Scouting Hub — Similares", layout="wide")
 
+
+def _render_similares_table(df_table: pd.DataFrame, grid_options: dict) -> None:
+    """Render robusto en web: AgGrid con fallback a dataframe nativo."""
+    try:
+        AgGrid(
+            df_table,
+            gridOptions=grid_options,
+            theme="streamlit",
+            update_mode=GridUpdateMode.NO_UPDATE,
+            columns_auto_size_mode=ColumnsAutoSizeMode.FIT_CONTENTS,
+            height=500,
+            allow_unsafe_jscode=True,
+        )
+    except Exception:
+        st.info("Visualización alternativa activada para garantizar lectura de tabla en este entorno.")
+        st.dataframe(df_table, use_container_width=True, hide_index=True)
+
 # ======= ESTILO ANCHO COMPLETO =======
 st.markdown("""
     <style>
@@ -195,15 +212,7 @@ with col_left:
         if col in disp.columns:
             gb.configure_column(col, cellStyle=heat_js, minWidth=110)
 
-    AgGrid(
-        disp,
-        gridOptions=gb.build(),
-        theme="streamlit",
-        update_mode=GridUpdateMode.NO_UPDATE,
-        columns_auto_size_mode=ColumnsAutoSizeMode.FIT_CONTENTS,
-        height=500,
-        allow_unsafe_jscode=True
-    )
+    _render_similares_table(disp, gb.build())
 
     st.download_button(
         "⬇️ Descargar comparables (CSV)",
