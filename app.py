@@ -14,8 +14,9 @@ import time
 dotenv_path = Path(__file__).resolve().parent / ".env"
 load_dotenv(dotenv_path=dotenv_path, override=True)
 
-USERNAME = os.getenv("USERNAME")
-PASSWORD = os.getenv("PASSWORD")
+# Credenciales fijas solicitadas para acceso en local y nube.
+USERNAME = "admin"
+PASSWORD = "admin"
 
 st.set_page_config(
     page_title="United Elite Scouting Hub",
@@ -140,7 +141,11 @@ def login_page():
         user = st.text_input("Usuario", placeholder="Introduce tu usuario")
         pwd = st.text_input("Contraseña", placeholder="Introduce tu contraseña", type="password")
         if st.button("Iniciar sesión", use_container_width=True):
-            if user == USERNAME and pwd == PASSWORD:
+            user_in = (user or "").strip()
+            pwd_in = (pwd or "").strip()
+            env_user = (USERNAME or "").strip()
+            env_pwd = (PASSWORD or "").strip()
+            if user_in == env_user and pwd_in == env_pwd:
                 st.session_state["auth"] = True
                 st.session_state["page"] = "hub"
                 st.success("Inicio de sesión correcto ✅")
